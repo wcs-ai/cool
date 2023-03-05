@@ -34,16 +34,6 @@ function dictSort(arr, key) {
   });
 }
 
-function updateDict(dict1, dict2) {
-  // dict2中的值更新到字典dict1。
-  assert(varType(dict1) === "dict", "must be dict");
-  assert(varType(dict2) === "dict", "must be dict");
-
-  for (let i in dict2) {
-    dict1[i] = dict2[i];
-  }
-}
-
 export function varType(val) {
   // 具体数据类型
   let _t = typeof val;
@@ -321,8 +311,7 @@ function env() {
   // 运行环境判断。
   var browser = {
     versions: (function() {
-      var u = navigator.userAgent,
-        app = navigator.appVersion;
+      var u = navigator.userAgent;
       return {
         //移动终端浏览器版本信息
         trident: u.indexOf("Trident") > -1, //IE内核
@@ -481,218 +470,57 @@ function replacePass(pass) {
   return _lockPass.join("");
 }
 
-/**     树设计
- * 初始化数据；懒加载；初始化；
- * 添加、更新、移除节点；
- * 逻辑操作和实际dom操作分开；
- * 与框架的耦合度降低；
- * 支持样式、逻辑的一些自定义；
- */
-// 节点基本数据类（同层节点数据过多时考虑使用【享元】）
-function Node(data, extend) {
-  var extendDefault = {
-    nodeDom: null,
-    childrenDom: null,
-    // 父节点key
-    parent: 0,
-    // 所在层级
-    level: 0,
-    // 其字节点的key
-    children: []
-  };
 
-  Object.assign(extendDefault, extend);
 
-  this.node = {
-    extend: extendDefault,
-    data: data
-  };
+/*********模糊匹配（N-Gram）********
+ * s1: 当前字符串
+ * s2：目标对比的字符串
+ * d: 分割间距
+*/
+function nGram(s1,s2,d){
+  const D = d || 2;
+  // 某1串过小情况，直接使用匹配
+  if(Math.min(s1.length,s2.length)<=2){
+    let mis,mas = '';
+    if(s1.length < s2.length){
+      mis = s1;mas = s2;
+    }else{
+      mis = s2;mas = s1;
+    }
+    const gd = mas.indexOf(mis);
+    return {grade:gd==-1?0:1,score:gd==-1?0:2*mis.length/(mis.length+mas.length)};
+  }
+  // 串分割方法
+  const splitByd = function(s){
+    let _ar = [];
+
+    for(let i=0,len = s.length;i<len;i+=D){
+      _ar.push(s.substr(i,D));
+    }
+    return _ar;
+  }
+
+  const g1 = splitByd(s1);
+  const g2 = splitByd(s2);
+  const len1 = g1.length,len2 = g2.length;
+  // calc similar group number
+  let n = 0;
+  for(let i=0,st=0;i<len1;i++){
+    for(let j=st;j<len2;j++){
+      if(g1[i]===g2[j]){
+        ++n;
+        st = j;
+        break;
+      }
+      else continue;
+    }
+  }
+  // res
+  const grade = len1 + len2 - D*n;
+  const score = (2*n / (len1+len2)).toFixed(3);
+  // back
+  return {grade:grade,score:parseFloat(score),g1,g2};
 }
-
-Node.prototype = {
-  _nodeTemplate: null,
-
-  _config: {
-    icon: "icon",
-    label: "label"
-  },
-  // 获取/创建节点模板
-  getDomTemplate: function() {
-    if (this._nodeTemplate !== null) return this._nodeTemplate;
-
-    var out = document.createElement("div");
-    out.innerHTML = `<div class="body"><i class="mark">A-</i> <span class="label"></span></div><div class="children"></div>`;
-    this._nodeTemplate = out;
-
-    return out;
-  },
-  // 获取当前节点
-  getNodeDom() {
-    var s = this.node.extend;
-    if (s.nodeDom) return s.nodeDom;
-
-    s.nodeDom = this.getDomTemplate().cloneNode(true);
-    return s.nodeDom;
-  },
-  // 放置子节点的元素
-  getChildrenBox: function() {
-    var n = this.node["extend"]["childrenDom"];
-
-    if (!this._nodeTemplate) return null;
-    if (n !== null) return n;
-
-    var box = this._nodeTemplate.getElementsByClassName("children");
-    n = box[0];
-    return box[0];
-  },
-  // 放置数据
-  setLabel() {
-    var labelEl = this.getNodeDom().getDomTemplate("label");
-    //TODO:使用try，catch
-    labelEl[0].innerText = this.node["data"]["label"];
-  },
-  // 事件绑定
-  bindEvent() {}
-};
-
-function CTree(setting, data) {
-  /**所有节点存储区域
-   * {key:Node}
-   * */
-  var _set = setting || {};
-  var defaultSetting = {
-    children: "children", //  子节点key
-    key: "id", //  节点标志
-    lazy: false, //  是否懒加载（点击时加载）
-    nodeType: "default", //  节点类型
-    rootKey: "root"
-  };
-  // 放置所有节点数据
-  this._nodeMap = {};
-  // 树box
-  this._treeDom = null;
-  // 合并配置
-  Object.assign(defaultSetting, _set);
-  this._setting = defaultSetting;
-  Object.freeze(this._setting);
-
-  this.initData(data);
-}
-/**树*/
-CTree.prototype = {
-  // 为初始节点数据处理
-  initData(data, level, parentNode) {
-    if (!(data instanceof Array)) return;
-
-    var _lev = level || 0;
-    var _parentNode = parentNode || {};
-    const _set = this._setting;
-    var nodeClass = null;
-    // 工厂匹配不同类型的节点【添加新的节点类型时这里扩展！】
-    switch (_set) {
-      case "default":
-        nodeClass = Node;
-        break;
-      case "rightMenu":
-        nodeClass = null;
-        break;
-      default:
-        nodeClass = Node;
-        break;
-    }
-    // 数据放入_nodeMap中
-    var n, arr, parentKey;
-
-    for (let i = 0, len = data.length; i < len; i++) {
-      n = data[i];
-      arr = this._getChildrenKey(n.children);
-      parentKey = _lev === 0 ? _set.rootKey : _parentNode[_set.key];
-      // 节点数据
-      this._nodeMap[n[_set.key]] = new nodeClass(n, {
-        parent: parentKey,
-        // 所在层级
-        level: _lev,
-        // 其字节点的key
-        children: arr
-      });
-      // 递归
-      if (n[_set.children]) {
-        this.initData(n[_set.children], _lev + 1, n);
-      }
-    }
-  },
-  // 获取其所有子节点key数组
-  _getChildrenKey(data) {
-    if (!(data instanceof Array)) return [];
-    var arr = [];
-    var _key = this._setting["key"];
-    // 添加子节点key
-    for (let i = 0, len = data.length; i < len; i++) {
-      arr.push(data[i][_key]);
-    }
-    return arr;
-  },
-  getTreeDom() {
-    if (this._treeDom) return this._treeDom;
-
-    this._treeDom = document.createElement("div");
-    return this._treeDom;
-  },
-  // 将整棵树挂载到元素，一次性渲染
-  mount(el) {
-    let treeDom = this.getTreeDom();
-    let keys = Object.keys(this._nodeMap);
-    const _set = this._setting;
-    var node, cel, parentEl, d;
-
-    // 挂载所有子节点
-    for (let i = 0, len = keys.length; i < len; i++) {
-      node = this._nodeMap[keys[i]];
-      cel = node.getNodeDom();
-      d = node.node["extend"];
-      //TODO:只能由底向上添加
-      if (d.parent === _set.rootKey) {
-        treeDom.appendChild(cel);
-      } else {
-        // TODO:使用try,catch
-        parentEl = this._nodeMap[d.parent].getChildrenBox();
-        parentEl.appendChild(cel);
-        console.info("_nodeMap--", this._nodeMap, parentEl);
-      }
-    }
-    // 挂载，一次性渲染
-    el.appendChild(treeDom);
-  },
-  deat(node){
-    const _set = this._setting;
-    let {data,extand} = node.node;
-    let chl = extand[_set.key];
-    // 叶子节点时开始返回
-    if(!chl) return node.getNodeDom();
-    else{
-      let pel = node.getChildrenBox();
-
-      // 循环子节点
-      for(var i=0,cnode,len=chl.length;i<len;i++){
-        cnode = this._nodeMap[chl[_set.key]];
-        // 递归获取子节点
-        cel = this.deat(cnode);
-        // 添加子节点
-        pel.appendChild(cel);
-      }
-    }
-  },
-  // 父节点key，节点数据
-  appendNode(key, data) {},
-  removeNode(key) {},
-  // 节点key，新节点数据
-  updateNode(key, data) {},
-  search() {},
-  // 放置数据
-  setLabel() {},
-  // 事件绑定
-  bindEvent() {}
-};
 /**元素拖动绑定：暂时只支持dialog对话框拖动
  * cel:元素。
  */
@@ -794,16 +622,38 @@ export function onScrollToBottom(el, callBack) {
   });
 }
 
+/*******堆排序实现********
+ * （数据较多，只排出前几个有序时可用）
+*/
+function adjustStack(R,low,high){
+  // 父节点位置，左子节点位置
+  let pi = low;
+  let cli = 2*low + 1;
+  let temp;
+
+  if(cli>=R.length) return;
+
+  while(pi<high){
+    // 比较左右子节点大小
+    if(R[cli]<R[cli+1]) ++cli;
+    // 父节点小于其孩子时，交换位置
+    if(R[pi]<R[cli]){
+      temp = R[cli];
+      R[cli] = R[pi];
+      R[pi] = temp;
+      // 更新父子节点位置
+      pi = cli;cli = 2*pi+1;
+    }
+  }
+}
+
+
 export default {
   strSelect,
   varType,
   multiConcat,
   createArr,
   distribute,
-  Node,
-  LinList,
-  Tree,
-  updateDict,
   dictSort,
   positionPass,
   replacePass

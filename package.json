@@ -4,6 +4,13 @@
   "description": "components and js cool",
   "author": "xsww",
   "private": true,
+  "files": [
+    "dist/*",
+    "src/*",
+    "public/*",
+    "*.json",
+    "*.js"
+  ],
   "scripts": {
     "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
     "build": "node build/build.js",
@@ -11,6 +18,8 @@
     "test:view": "cypress open"
   },
   "dependencies": {
+    "@antv/g6": "^4.6.15",
+    "insert-css": "^2.0.0",
     "scss-loader": "0.0.1",
     "vue": "^2.6.14",
     "vue-router": "^3.0.1"

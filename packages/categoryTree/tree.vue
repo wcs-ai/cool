@@ -18,6 +18,8 @@
 </template>
 <script>
 import lineItem from "./lineItem.vue";
+import { searchTree } from "./search.js";
+
 export default {
   inheritAttrs: false,
   props: {
@@ -86,14 +88,12 @@ export default {
   },
   watch: {
     data(n, o) {
-      console.info("n--", n);
       this.formatData = this.preDealData(n);
     }
   },
   created() {
     this.formatData = this.preDealData(this.data);
   },
-
   methods: {
     preDealData(list) {
       list.forEach(x => {
@@ -118,6 +118,13 @@ export default {
         return list;
       }
       this.formatData = loopTree(this.data);
+    },
+    // 按name，tree查询
+    search(params) {
+      let res = new searchTree(this.config);
+      let ids = res.search(params, this.data);
+
+      return ids || [];
     },
     nodeClick(item) {
       this.$emit("nodeClick", item);

@@ -2,10 +2,14 @@
   <div class="draggle-com">
     <div class="draggle-title">良好的控制</div>
     <div id="draggle"></div>
+    <p class="ennglish">
+      economic adj-经济的；huge>large（size,amount,number）; bulky
+      adj-庞大的（object）;finance-financial-financially-finacing-n:融资
+    </p>
   </div>
 </template>
 <script>
-import { dragBind } from "@/assets/jsCool";
+import { dragBind } from "@/utils/jsCool";
 
 export default {
   name: "subDevice",

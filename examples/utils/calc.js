@@ -59,11 +59,10 @@ function toInteger (floatNum) {
 *
 * @param a {number} 运算数1
 * @param b {number} 运算数2
-* @param digits {number} 精度，保留的小数点数，比如 2, 即保留为两位小数
 * @param op {string} 运算类型，有加减乘除（add/subtract/multiply/divide）
 *
 */
-function operation (a, b, digits, op) {
+function operation (a, b, op) {
   var o1 = toInteger(a)
   var o2 = toInteger(b)
   var n1 = o1.num
@@ -101,15 +100,15 @@ function operation (a, b, digits, op) {
 }
 
 // 加减乘除的四个接口
-export function add(a, b, digits) {
-  return operation(a, b, digits, 'add')
+export function add(a, b) {
+  return operation(a, b, 'add')
 }
-export function subtract(a, b, digits) {
-  return operation(a, b, digits, 'subtract')
+export function subtract(a, b) {
+  return operation(a, b,'subtract')
 }
-export function multiply(a, b, digits) {
-  return operation(a, b, digits, 'multiply')
+export function multiply(a, b) {
+  return operation(a, b,'multiply')
 }
-export function divide(a, b, digits) {
-  return operation(a, b, digits, 'divide')
+export function divide(a, b) {
+  return operation(a, b,'divide')
 }
